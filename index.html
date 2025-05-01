@@ -88,9 +88,9 @@
 </head>
 <body>
   <div id="formulario">
-    <strong>Setores Selecionados:</strong>
+    <strong>Número de Domicílios no Setor:</strong>
     <div id="info">Nenhum setor.</div>
-    <button id="calcular" onclick="calcularSoma()">Somar Domicílios</button>
+    <button id="calcular" onclick="calcularSoma()">Total de Domicílios</button>
     <button id="exportar" onclick="exportarGeoJSON()">Exportar GeoJSON</button>
     <button id="limpar" onclick="limparSelecao()">Limpar Seleção</button>
   </div>
@@ -137,19 +137,16 @@
     }
 
     function calcularSoma() {
-      let totalV001 = 0, totalV002 = 0, totalV003 = 0;
+      let total = 0;
 
       setoresSelecionados.forEach(s => {
-        totalV001 += Number(s.Domicilio01_V001 || 0);
-        totalV002 += Number(s.Domicilio01_V002 || 0);
-        totalV003 += Number(s.Domicilio01_V003 || 0);
+        total += Number(s.Domicilio01_V001 || 0);
       });
 
       const info = document.getElementById('info');
       info.innerHTML = `
         <b>${setoresSelecionados.length}</b> setor(es) selecionado(s)<br/>
-        <b>Domicílio V001:</b> ${totalV001}<br/>
-         b>Domicílio V003:</b> ${totalV003}
+        <b>Número de domicílios:</b> ${total}
       `;
     }
 
@@ -195,7 +192,14 @@
         camadaSetores = L.geoJSON(data, {
           style: { color: "#d32f2f", weight: 1, fillOpacity: 0.2 },
           onEachFeature: (feature, layer) => {
-            layer.on({ click: highlightFeature });
+            layer.on({
+              click: function (e) {
+                highlightFeature(e);
+                const props = e.target.feature.properties;
+                const total = props.Domicilio01_V001 || 0;
+                e.target.bindPopup(`<b>Domicílios no setor:</b> ${total}`).openPopup();
+              }
+            });
           }
         }).addTo(map);
       })
