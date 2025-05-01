@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Soma de Domicílios - Setores IBGE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #formulario {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      z-index: 1000;
+      background: #f9f9f9;
+      padding: 20px 16px;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      width: 280px;
+      backdrop-filter: blur(4px);
+      border: 1px solid #ddd;
+    }
+
+    #formulario strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 17px;
+      font-weight: 600;
+      color: #222;
+    }
+
+    #info {
+      font-size: 14.2px;
+      color: #333;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    #formulario button {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease-in-out;
+    }
+
+    #formulario button#calcular {
+      background: linear-gradient(to right, #009688, #00796b);
+      color: #fff;
+    }
+
+    #formulario button#calcular:hover {
+      background: linear-gradient(to right, #00796b, #004d40);
+      transform: scale(1.03);
+    }
+
+    #formulario button#limpar {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    #formulario button#limpar:hover {
+      background: #d5d5d5;
+      transform: scale(1.02);
+    }
+
+    #formulario button#exportar {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    #formulario button#exportar:hover {
+      background: #388e3c;
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 600px) {
+      #formulario {
+        width: calc(100% - 40px);
+        left: 20px;
+        top: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="formulario">
+    <strong>Setores Selecionados:</strong>
+    <div id="info">Nenhum setor.</div>
+    <button id="calcular" onclick="calcularSoma()">Somar Domicílios</button>
+    <button id="exportar" onclick="exportarGeoJSON()">Exportar GeoJSON</button>
+    <button id="limpar" onclick="limparSelecao()">Limpar Seleção</button>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([-7.12, -34.86], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    let setoresSelecionados = [];
+    let camadaSetores = null;
+
+    function highlightFeature(e) {
+      const layer = e.target;
+      const props = layer.feature.properties;
+      const id = props.cd_setor || props.CD_SETOR || props.ID || Math.random();
+
+      const i = setoresSelecionados.findIndex(f => f._id === id);
+      if (i >= 0) {
+        setoresSelecionados.splice(i, 1);
+        layer.setStyle({ color: "#d32f2f" });
+      } else {
+        props._id = id;
+        props._geometry = layer.feature.geometry;
+        setoresSelecionados.push(props);
+        layer.setStyle({ color: "#009688" });
+      }
+
+      atualizarInfo();
+    }
+
+    function atualizarInfo() {
+      const info = document.getElementById('info');
+      if (setoresSelecionados.length === 0) {
+        info.innerHTML = 'Nenhum setor.';
+      } else {
+        info.innerHTML = `${setoresSelecionados.length} setor(es) selecionado(s).`;
+      }
+    }
+
+    function calcularSoma() {
+      let totalV001 = 0, totalV002 = 0, totalV003 = 0;
+
+      setoresSelecionados.forEach(s => {
+        totalV001 += Number(s.Domicilio01_V001 || 0);
+        totalV002 += Number(s.Domicilio01_V002 || 0);
+        totalV003 += Number(s.Domicilio01_V003 || 0);
+      });
+
+      const info = document.getElementById('info');
+      info.innerHTML = `
+        <b>${setoresSelecionados.length}</b> setor(es) selecionado(s)<br/>
+        <b>Domicílio V001:</b> ${totalV001}<br/>
+        <b>Domicílio V002:</b> ${totalV002}<br/>
+        <b>Domicílio V003:</b> ${totalV003}
+      `;
+    }
+
+    function limparSelecao() {
+      setoresSelecionados = [];
+      atualizarInfo();
+
+      if (camadaSetores) {
+        camadaSetores.eachLayer(layer => {
+          layer.setStyle({ color: "#d32f2f", weight: 1, fillOpacity: 0.2 });
+        });
+      }
+    }
+
+    function exportarGeoJSON() {
+      const geojson = {
+        type: "FeatureCollection",
+        features: setoresSelecionados.map(s => ({
+          type: "Feature",
+          geometry: s._geometry,
+          properties: { ...s }
+        }))
+      };
+
+      // Remove os campos auxiliares
+      geojson.features.forEach(f => {
+        delete f.properties._id;
+        delete f.properties._geometry;
+      });
+
+      const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "setores_selecionados.geojson";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    fetch('setores.geojson')
+      .then(res => res.json())
+      .then(data => {
+        camadaSetores = L.geoJSON(data, {
+          style: { color: "#d32f2f", weight: 1, fillOpacity: 0.2 },
+          onEachFeature: (feature, layer) => {
+            layer.on({ click: highlightFeature });
+          }
+        }).addTo(map);
+      })
+      .catch(err => console.error("Erro ao carregar GeoJSON:", err));
+  </script>
+</body>
+</html>
