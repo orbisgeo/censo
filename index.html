@@ -11,12 +11,10 @@
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
     }
-
     #map {
       height: 100vh;
       width: 100vw;
     }
-
     #formulario {
       position: absolute;
       top: 30px;
@@ -30,7 +28,6 @@
       backdrop-filter: blur(4px);
       border: 1px solid #ddd;
     }
-
     #formulario strong {
       display: block;
       margin-bottom: 10px;
@@ -38,14 +35,12 @@
       font-weight: 600;
       color: #222;
     }
-
     #info {
       font-size: 14.2px;
       color: #333;
       margin-bottom: 12px;
       line-height: 1.5;
     }
-
     #formulario button {
       display: block;
       width: 100%;
@@ -58,37 +53,30 @@
       font-weight: 500;
       transition: all 0.2s ease-in-out;
     }
-
     #formulario button#calcular {
       background: linear-gradient(to right, #009688, #00796b);
       color: #fff;
     }
-
     #formulario button#calcular:hover {
       background: linear-gradient(to right, #00796b, #004d40);
       transform: scale(1.03);
     }
-
     #formulario button#limpar {
       background: #e0e0e0;
       color: #333;
     }
-
     #formulario button#limpar:hover {
       background: #d5d5d5;
       transform: scale(1.02);
     }
-
     #formulario button#exportar {
       background: #4caf50;
       color: #fff;
     }
-
     #formulario button#exportar:hover {
       background: #388e3c;
       transform: scale(1.03);
     }
-
     @media (max-width: 600px) {
       #formulario {
         width: calc(100% - 40px);
@@ -187,7 +175,6 @@
         }))
       };
 
-      // Remove os campos auxiliares
       geojson.features.forEach(f => {
         delete f.properties._id;
         delete f.properties._geometry;
@@ -202,7 +189,8 @@
       URL.revokeObjectURL(url);
     }
 
-    fetch('setores.geojson')
+    // 🔥 Firebase Realtime Database - carregamento dos setores
+    fetch('https://setores-censitarios-default-rtdb.firebaseio.com/.json')
       .then(res => res.json())
       .then(data => {
         camadaSetores = L.geoJSON(data, {
